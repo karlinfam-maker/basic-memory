@@ -1,3 +1,4 @@
+<a name="markdown-path-links"></a>
 # Ссылки на файлы в Markdown
 
 Basic Memory индексирует обычные ссылки Markdown на файлы того же проекта как
