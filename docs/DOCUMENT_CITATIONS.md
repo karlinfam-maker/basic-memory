@@ -1,6 +1,7 @@
-# PDF page citations
+<a name="pdf-page-citations"></a>
+# Ссылки на страницы PDF
 
-Document enrichment can attach an optional `locator` to an observation:
+При обогащении документа к наблюдению можно добавить необязательный `locator`:
 
 ```json
 {
@@ -10,12 +11,13 @@ Document enrichment can attach an optional `locator` to an observation:
 }
 ```
 
-`page` is the one-based physical PDF page, not the printed page label. Trusted
-assembly checks it against the extraction's page count and derives the destination
-from the source file path. The agent does not supply a citation URL.
+`page` — номер физической страницы PDF, начиная с единицы, а не напечатанный
+номер. При доверенной сборке он сверяется с числом извлечённых страниц, а адрес
+назначения определяется по пути к исходному файлу. Агент не передаёт URL ссылки.
 
-The resulting document retains its existing `source` checksum and storage-version
-provenance and adds OKF-compatible `sources` entries and Markdown footnotes:
+Итоговый документ сохраняет существующую контрольную сумму `source` и сведения
+о версии в хранилище; к нему добавляются совместимые с OKF записи `sources`
+и сноски Markdown:
 
 ```yaml
 sources:
@@ -35,65 +37,72 @@ sources:
 [^document-page-2]: [PDF page 2](/docs/report.pdf#page=2)
 ```
 
-The footnote label joins to `sources[].id`, not the entry's array position. IDs are
-scoped to this document note and its single trusted source PDF. Multiple
-observations on the same page share an entry. Reordering observations or sources
-does not change the target. Conflicting printed labels for the same page are
-rejected. Uncited documents retain their existing serialized shape.
+Метка сноски связывается с `sources[].id`, а не с позицией записи в массиве.
+Идентификаторы действуют в пределах заметки документа и одного доверенного исходного
+PDF. Наблюдения на одной странице используют общую запись. Изменение порядка
+наблюдений или источников не меняет назначение ссылки. Противоречащие друг другу
+печатные обозначения одной страницы отклоняются. Документы без ссылок сохраняют
+прежнюю структуру сериализации.
 
-The leading slash denotes a project/bundle-root-relative resource. Consumers must
-resolve it in that scope; it is not a new Cloud HTTP route. The fragment requests
-the physical page in a supporting PDF viewer. The existing source checksum and
-storage version identify the bytes used for extraction; the link itself does not
-retrieve a historical version or automatically detect replacement of the PDF.
+Начальный слеш обозначает ресурс относительно корня проекта или пакета. Получатель
+должен разрешать путь в этих пределах; это не новый HTTP-маршрут Cloud. Фрагмент
+запрашивает физическую страницу в совместимом просмотрщике PDF. Существующие
+контрольная сумма источника и версия хранилища определяют данные, использованные
+при извлечении; сама ссылка не загружает историческую версию и не обнаруживает
+автоматически замену PDF.
 
-## Scope and prior art
+<a name="scope-and-prior-art"></a>
+## Область применения и предшествующие решения
 
-This implements page-level addressing for #1366 and the citation convention from
-the amended SPEC-89. It does not implement quote
-highlighting, generic OKF conformance (#1246), evidence watermarks, or contradiction
-detection. Cloud prompt adoption and viewer routing are separate integration work.
+Реализованы ссылки на уровне страниц для #1366 и соглашение о ссылках из дополненной
+SPEC-89. Подсветка цитат, общая совместимость с OKF (#1246), водяные знаки
+доказательств и выявление противоречий не реализованы. Подключение к промптам
+Cloud и маршрутизация просмотрщика — отдельные задачи интеграции.
 
-## Extraction page map
+<a name="extraction-page-map"></a>
+## Карта страниц извлечённого текста
 
-New pdf-inspector extractions store `extraction.page_map` on the ingestion-run
-note (`document-ingestion-runs/<run_id>.md`) only. The extracted-text sidecar
-(`type: extracted_text`) keeps a summary of the extraction without the map,
-because the map has one entry per page and would make a long PDF's sidecar
-frontmatter tens of kilobytes. Read the map from the run note named by the
-sidecar's `ingestion.run_id`. Sidecars written before this change (with
-`type: document`) still carry a copy, which equals the run note's map.
+Новые результаты pdf-inspector сохраняют `extraction.page_map` только в заметке
+запуска обработки (`document-ingestion-runs/<run_id>.md`). Сопутствующий файл
+извлечённого текста (`type: extracted_text`) содержит краткое описание извлечения
+без карты: в ней одна запись на страницу, и для длинного PDF она увеличила бы
+frontmatter на десятки килобайт. Читайте карту из заметки запуска, указанного в
+`ingestion.run_id` сопутствующего файла. Сопутствующие файлы, созданные до этого
+изменения (с `type: document`), по-прежнему содержат копию карты, совпадающую с
+картой заметки запуска.
 
-Citation assembly does not need the map. It checks a locator's page against
-the sidecar's `extraction.page_count` and builds the link from `source.file_path`.
+Для сборки ссылок карта не нужна. Номер страницы из `locator` проверяется по
+`extraction.page_count` сопутствующего файла, а ссылка строится из
+`source.file_path`.
 
-Each entry has a one-based physical `page` and half-open
-`start`/`end` offsets measured in Unicode code points, as in Python string slices.
-The ranges partition the normalized raw Markdown body, including page markers;
-inter-page separators belong to the preceding page. OCR-only pages retain a
-range for their marker. Offsets exclude frontmatter and include the canonical
-final newline.
+Каждая запись содержит физический номер страницы `page`, начиная с единицы, и
+полуоткрытый диапазон `start`/`end` в кодовых точках Unicode, как в срезах строк
+Python. Диапазоны разбивают нормализованное тело исходного Markdown, включая
+маркеры страниц; разделители между страницами относятся к предыдущей странице.
+Для страниц только с OCR сохраняется диапазон их маркера. Смещения не включают
+frontmatter, но включают канонический завершающий перевод строки.
 
-The map carries `body_length` and a SHA-256 checksum of that body's UTF-8 bytes.
-`DocumentPageMapV1.resolve_span(body, start=..., end=...)` verifies the exact body
-before returning the physical pages intersecting a nonempty span. It rejects
-rewritten text and invalid bounds. After enrichment the map still describes the
-raw extraction revision, never the new agent-written body. The run note's
-`output.raw` names that revision. Retrieve it before resolving a span; the source PDF checksum identifies a different
-artifact and cannot substitute for the body checksum.
+Карта содержит `body_length` и контрольную сумму SHA-256 байтов тела в UTF-8.
+`DocumentPageMapV1.resolve_span(body, start=..., end=...)` проверяет точное
+содержимое тела и возвращает физические страницы, пересекающиеся с непустым
+диапазоном. Перезаписанный текст и недопустимые границы отклоняются. После
+обогащения карта по-прежнему описывает исходную версию извлечённого текста, а не
+новое содержимое, записанное агентом. Эта версия указана в `output.raw` заметки
+запуска. Получите её до определения страниц диапазона: контрольная сумма исходного
+PDF относится к другому артефакту и не заменяет контрольную сумму тела.
 
-Older extractions omit the optional map and retain their serialized shape. The
-pdf-inspector extraction profile is now `pdf-inspector-v2`, yielding a new run
-identity when the same PDF is explicitly re-extracted; existing notes are not
-backfilled automatically. Other extraction providers may supply the same
-parser-neutral map contract.
+В старых результатах необязательная карта отсутствует, а формат сериализации
+остаётся прежним. Профиль извлечения pdf-inspector теперь называется
+`pdf-inspector-v2`: при явном повторном извлечении того же PDF создаётся новый
+идентификатор запуска; существующие заметки автоматически не дополняются. Другие
+поставщики извлечения могут использовать тот же независимый от парсера контракт карты.
 
-- [RFC 8118, section 3](https://www.rfc-editor.org/rfc/rfc8118.html#section-3)
-  defines the PDF `page=N` fragment with one-based page numbering.
-- [OKF provenance sources](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md#51-provenance-sources)
-  provides `sources[].id`, resource references, and footnote-label joins.
-- [Zotero PDF reader](https://www.zotero.org/support/pdf_reader) demonstrates the
-  annotation/note-to-source-page navigation experience.
+- [RFC 8118, раздел 3](https://www.rfc-editor.org/rfc/rfc8118.html#section-3)
+  определяет фрагмент PDF `page=N` с нумерацией страниц от единицы.
+- [Источники происхождения OKF](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md#51-provenance-sources)
+  описывают `sources[].id`, ссылки на ресурсы и связь с метками сносок.
+- [Средство чтения PDF в Zotero](https://www.zotero.org/support/pdf_reader)
+  показывает переход от аннотации или заметки к странице источника.
 - [W3C TextQuoteSelector](https://www.w3.org/TR/annotation-model/#text-quote-selector)
-  is prior art for a later, more precise exact-text/context selector; no W3C
-  selector is implemented here.
+  служит примером для будущего более точного выбора текста и контекста; здесь
+  селекторы W3C не реализованы.

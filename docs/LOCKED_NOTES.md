@@ -1,7 +1,8 @@
-# Locked notes
+<a name="locked-notes"></a>
+# Защищённые заметки
 
-Set the YAML boolean `locked: true` in a note's frontmatter to protect it from
-Basic Memory content mutations:
+Чтобы защитить содержимое заметки от изменений через Basic Memory, установите
+логическое значение YAML `locked: true` во frontmatter заметки:
 
 ```yaml
 ---
@@ -10,26 +11,28 @@ locked: true
 ---
 ```
 
-An agent can create a locked note or lock an existing note through a write or edit.
-After that, API writes, edits, overwrites, and deletes return HTTP 423 with an
-explanation. MCP and CLI note tools use that same API contract. Incoming metadata,
-replacement Markdown, or find/replace operations cannot remove or weaken the lock:
-the check uses the existing canonical Markdown before preparing the proposed edit.
+Агент может создать защищённую заметку или защитить существующую при записи или
+редактировании. После этого API возвращает HTTP 423 с объяснением при попытках
+записать, отредактировать, перезаписать или удалить заметку. Инструменты MCP и CLI
+для работы с заметками используют тот же контракт API. Переданные метаданные,
+заменяющий Markdown и операции поиска с заменой не могут снять или ослабить защиту:
+перед подготовкой изменения проверяется текущее каноническое содержимое Markdown.
 
-API deletion of a directory containing a locked note is rejected before deleting any of
-its notes. Moves remain allowed
-and preserve the lock, including when the move updates a permalink. Reads and
-indexing remain available.
+API отклоняет удаление каталога с защищённой заметкой до удаления любых заметок из
+него. Перемещение по-прежнему разрешено и сохраняет защиту, в том числе при
+обновлении постоянной ссылки. Чтение и индексация остаются доступными.
 
-This is a one-way switch through the note API, not filesystem access control. To
-unlock a note, edit its Markdown file directly and remove `locked: true` or set it
-to `false`. Normal local reconciliation picks up that edit. There is no API unlock
-flag, privileged unlock endpoint, or distinction between human and agent callers.
-Imports are raw file writes and are outside this contract, even when invoked through an
-import endpoint. They may overwrite locked files. Direct filesystem edits and deletion
-of a file or its directory also override the lock; normal indexing reconciles the result.
-Basic Memory does not block or undo those changes. Agents with direct filesystem access
-can therefore bypass this API-only protection.
+Это односторонний переключатель в API заметок, а не разграничение доступа к файловой
+системе. Чтобы снять защиту, отредактируйте файл Markdown напрямую: удалите
+`locked: true` или установите значение `false`. Обычная локальная синхронизация
+обнаружит это изменение. В API нет флага снятия защиты, специального привилегированного
+метода или различия между запросами человека и агента.
 
-Only a YAML boolean enables the lock; the string `"true"` is ordinary metadata.
-Schema validation enforcement and Teams authorization are separate features.
+При импорте файлы записываются напрямую, вне этого контракта, даже если импорт вызван
+через API. Импорт может перезаписать защищённые файлы. Прямое редактирование и удаление
+файла или его каталога также обходят защиту; обычная индексация учитывает результат.
+Basic Memory не блокирует и не отменяет эти изменения. Поэтому агенты с прямым доступом
+к файловой системе могут обойти защиту, действующую только на уровне API.
+
+Защиту включает только логическое значение YAML; строка `"true"` — обычные метаданные.
+Обязательная проверка схемы и авторизация Teams — отдельные функции.

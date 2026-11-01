@@ -1,28 +1,42 @@
-## Coverage policy (practical 100%)
+<a name="coverage-policy-practical-100"></a>
+## Политика покрытия тестами (практические 100%)
 
-Basic Memory’s test suite intentionally mixes:
-- unit tests (fast, deterministic)
-- integration tests (real filesystem + real DB via `test-int/`)
+Набор тестов Basic Memory намеренно сочетает:
 
-To keep the default CI signal **stable and meaningful**, the default `pytest` coverage report targets **core library logic** and **excludes** a small set of modules that are either:
-- highly environment-dependent (OS/DB tuning)
-- inherently interactive (CLI)
-- background-task orchestration (watchers/sync runners)
+- модульные тесты — быстрые и детерминированные;
+- интеграционные тесты с настоящей файловой системой и базой данных в `test-int/`.
 
-### What's excluded (and why)
+Чтобы результат CI по умолчанию оставался **стабильным и полезным**, отчёт pytest
+о покрытии ориентирован на **основную логику библиотеки** и **исключает** небольшую
+группу модулей, которые:
 
-Coverage excludes are configured in `pyproject.toml` under `[tool.coverage.report].omit`.
+- сильно зависят от среды (настройка ОС и базы данных);
+- по своей природе интерактивны (CLI);
+- управляют фоновыми задачами (наблюдатели файлов и процессы синхронизации).
 
-Current exclusions include:
-- `src/basic_memory/cli/**`: interactive wrappers; behavior is validated via higher-level tests and smoke tests.
-- `src/basic_memory/db.py`: platform/backend tuning paths (SQLite/Postgres/Windows), covered by integration tests and targeted runs.
-- `src/basic_memory/services/initialization.py`: startup orchestration/background tasks; covered indirectly by app/MCP entrypoints.
-- `src/basic_memory/sync/sync_service.py`: heavy filesystem↔DB integration; validated in integration suite (not enforced in unit coverage).
+<a name="whats-excluded-and-why"></a>
+### Что исключено и почему
 
-### Recommended additional runs
+Исключения покрытия настраиваются в `pyproject.toml` в разделе
+`[tool.coverage.report].omit`.
 
-If you want extra confidence locally/CI:
-- **Postgres backend**: run tests with `BASIC_MEMORY_TEST_POSTGRES=1`.
-- **Strict backend-complete coverage**: run coverage on SQLite + Postgres and combine the results (recommended).
+Сейчас исключены:
 
+- `src/basic_memory/cli/**`: интерактивные оболочки; поведение проверяется тестами
+  более высокого уровня и дымовыми тестами.
+- `src/basic_memory/db.py`: настройка платформ и баз данных (SQLite, Postgres,
+  Windows), проверяемая интеграционными и целевыми тестами.
+- `src/basic_memory/services/initialization.py`: организация запуска и фоновые
+  задачи; проверяются косвенно через точки входа приложения и MCP.
+- `src/basic_memory/sync/sync_service.py`: объёмная интеграция файловой системы и
+  БД; проверяется интеграционным набором, но не включена в обязательное покрытие
+  модульными тестами.
 
+<a name="recommended-additional-runs"></a>
+### Рекомендуемые дополнительные запуски
+
+Для дополнительной уверенности локально или в CI:
+
+- **Postgres:** запустите тесты с `BASIC_MEMORY_TEST_POSTGRES=1`.
+- **Строгое покрытие всех баз данных:** соберите и объедините результаты покрытия
+  для SQLite и Postgres; это рекомендуемый вариант.

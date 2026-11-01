@@ -1,69 +1,76 @@
 # bm doctor
 
-`bm doctor` reports problems in your local Basic Memory projects and, for each one
-it can fix, the command that fixes it. Its checks only read: they never change a
-project's notes or index, and the self-test runs in a throwaway sandbox. Like every
-local `bm` command, opening the database first reconciles the projects in your
-config with the database (#1334). See #1798 for the design.
+`bm doctor` сообщает о проблемах в локальных проектах Basic Memory и для каждой
+проблемы, которую можно исправить, показывает соответствующую команду. Сами
+проверки только читают данные: они не изменяют заметки или индекс проекта, а
+самопроверка выполняется во временной изолированной среде. Как и при выполнении
+любой локальной команды `bm`, открытие базы сначала сверяет проекты из конфигурации
+с базой данных (#1334). Описание решения см. в #1798.
 
 ```bash
-bm doctor                      # every local project, then the sandboxed self-test
-bm doctor --project work       # one project
-bm doctor --skip-self-test     # report only; fast
-bm doctor --json               # the same report for scripts and agents
+bm doctor                      # все локальные проекты, затем изолированная самопроверка
+bm doctor --project work       # один проект
+bm doctor --skip-self-test     # только отчёт; быстро
+bm doctor --json               # тот же отчёт для скриптов и агентов
 ```
 
-It exits 0 when no finding is an error and the self-test passed, and 1 otherwise.
-The `memory-doctor` skill teaches an agent to run it, explain the findings, and
-run the fixes once the user agrees.
+Команда возвращает код 0, если нет ошибок и самопроверка прошла успешно, и 1 в
+остальных случаях. Навык `memory-doctor` учит агента запускать проверку, объяснять
+результаты и выполнять исправления после согласия пользователя.
 
-## Checks
+<a name="checks"></a>
+## Проверки
 
-| Check | Finds | Fix |
+| Проверка | Что обнаруживает | Исправление |
 |---|---|---|
-| `project_path` | The project directory no longer exists | Restore it, or point the project at its new location |
-| `index_readiness` | A project that was never indexed, or indexing still catching up (new, changed or deleted files not yet indexed) | `bm project index NAME` |
-| `search_index` | Duplicate search rows, rows that match no current note, notes with no search row | `bm reindex --search --full --project NAME` |
-| `materialization` | Accepted note writes that failed, are still in flight or were abandoned mid-save, or were held back because the file changed on disk | `bm reindex --search --project NAME` re-drives failed and abandoned saves |
+| `project_path` | Каталог проекта больше не существует | Восстановить его или указать новое расположение проекта |
+| `index_readiness` | Проект ещё не индексировался или индексация не завершена: новые, изменённые либо удалённые файлы ещё не обработаны | `bm project index NAME` |
+| `search_index` | Дубли строк поиска, строки без соответствующей текущей заметки и заметки без строки поиска | `bm reindex --search --full --project NAME` |
+| `materialization` | Принятые записи заметок, которые завершились ошибкой, ещё выполняются, были прерваны или отложены из-за изменения файла на диске | `bm reindex --search --project NAME` повторно запускает неудавшиеся и прерванные сохранения |
 
-## Severity
+<a name="severity"></a>
+## Уровни серьёзности
 
-Search rows, embeddings and note saves are derived state that catches up in the
-background, so doctor grades findings by whether they will go away on their own:
+Строки поиска, векторные представления и сохранённые файлы заметок относятся к
+производному состоянию, которое обновляется в фоне. Поэтому doctor оценивает
+результаты с учётом того, могут ли они исчезнуть самостоятельно:
 
-- **info**: expected while work is in progress, such as indexing still catching
-  up.
-- **warning**: needs attention but may recover, such as a failed save that the
-  next start retries.
-- **error**: will not go away without the fix, such as a duplicated search row,
-  or a missing or orphaned row once indexing has settled.
+- **info**: ожидаемое состояние во время работы, например незавершённая индексация.
+- **warning**: требуется внимание, но восстановление возможно, например после
+  ошибки сохранения, которое будет повторено при следующем запуске.
+- **error**: проблема не исчезнет без исправления, например дублирующаяся строка
+  поиска либо отсутствующая или осиротевшая строка после завершения индексации.
 
-Duplicate, missing and orphaned search rows are warnings while file indexing still
-has work owed: indexing a note rewrites all of its rows, so the pass clears an
-anomaly on a note it rewrites, but not one on a note it does not. Once indexing
-settles they are errors. The fix is a full search reindex, because a plain one
-skips unchanged notes.
+Дублирующиеся, отсутствующие и осиротевшие строки поиска считаются предупреждениями,
+пока осталась работа по индексации файлов: индексация заметки перезаписывает все её
+строки и тем самым устраняет аномалии в обработанной заметке, но не в той, которую
+не перезаписывала. После завершения индексации такие результаты становятся ошибками.
+Для исправления нужна полная переиндексация поиска, поскольку обычная пропускает
+неизменённые заметки.
 
-Search rows normally outnumber notes, because observations and relations have
-their own rows. An unresolved relation target is valid and is not an orphan.
-Notes whose modified time is before their created time are reported as info:
-without frontmatter dates the parser uses file times, and copying a vault with
-preserved mtimes produces exactly that.
+Строк поиска обычно больше, чем заметок, поскольку у наблюдений и отношений есть
+собственные строки. Неразрешённая цель отношения допустима и не считается
+осиротевшей. Заметки, у которых время изменения предшествует времени создания,
+отмечаются как info: если даты во frontmatter отсутствуют, парсер использует
+время файла, а копирование хранилища с сохранением времени изменения даёт именно
+такой результат.
 
-## Self-test
+<a name="self-test"></a>
+## Самопроверка
 
-The self-test creates a project, writes a note through the API, writes another
-file by hand, indexes, searches and checks status. It runs in a child process
-with its own temporary home, config, database and temp directory, and every
-`BASIC_MEMORY_*` variable removed, so it cannot touch your install. Only the
-FastEmbed model cache is shared, so the model is not downloaded again.
+Самопроверка создаёт проект, записывает заметку через API и ещё один файл вручную,
+выполняет индексацию и поиск, затем проверяет статус. Она запускается в дочернем
+процессе с собственными временными домашним каталогом, конфигурацией, базой данных
+и временным каталогом; все переменные `BASIC_MEMORY_*` удаляются. Поэтому она не
+может затронуть вашу установку. Общим остаётся только кэш моделей FastEmbed, чтобы
+не загружать модель повторно.
 
 ## API
 
-`GET /v2/projects/{project_external_id}/doctor` returns the report for one
-project: a list of findings, each with a `check`, `severity`, `summary`,
-`evidence`, and an optional typed `action`. The CLI turns actions into commands;
-the API does not, because a cloud project cannot run a local command.
-`ProjectClient.get_doctor_report()` calls it.
+`GET /v2/projects/{project_external_id}/doctor` возвращает отчёт по одному
+проекту: список результатов, каждый с полями `check`, `severity`, `summary`,
+`evidence` и необязательным типизированным `action`. CLI преобразует действия
+в команды; API этого не делает, поскольку облачный проект не может выполнить
+локальную команду. Метод вызывается через `ProjectClient.get_doctor_report()`.
 
-Cloud projects are skipped for now and listed in the output.
+Пока облачные проекты пропускаются и перечисляются в выводе.

@@ -1,34 +1,41 @@
-# Pi memory package shipping checklist
+<a name="pi-memory-package-shipping-checklist"></a>
+# Контрольный список выпуска пакета Pi memory
 
-## Package contents
+<a name="package-contents"></a>
+## Состав пакета
 
-The Pi package lives at `integrations/pi/` and is intended to publish as `@basicmemory/pi-basic-memory`.
+Пакет Pi находится в `integrations/pi/` и предназначен для публикации как
+`@basicmemory/pi-basic-memory`.
 
-It ships:
+В пакет входят:
 
-- Pi package metadata in `package.json` (`pi.extensions`, `pi.skills`, `pi-package` keyword, public npm publish config).
-- TypeScript extension source in `extensions/`.
-- Pi-aware active skill in `skills/basic-memory-pi/`.
-- Bundled canonical Basic Memory references in `skill-references/*/REFERENCE.md`.
-- Skill integration docs in `SKILLS.md`.
-- User README in `README.md`.
-- AGPL-3.0-or-later license.
+- метаданные пакета Pi в `package.json` (`pi.extensions`, `pi.skills`, ключевое
+  слово `pi-package`, настройки публичной публикации в npm);
+- исходный код расширения TypeScript в `extensions/`;
+- активный навык с поддержкой Pi в `skills/basic-memory-pi/`;
+- прилагаемые канонические справочные материалы Basic Memory в
+  `skill-references/*/REFERENCE.md`;
+- документация по интеграции навыков в `SKILLS.md`;
+- пользовательский README в `README.md`;
+- лицензия AGPL-3.0-or-later.
 
-The package does not bundle `pi-mcp-adapter`; MCP mode is an opt-in dependency installed separately by the user:
+`pi-mcp-adapter` не входит в пакет: для режима MCP пользователь устанавливает эту
+необязательную зависимость отдельно:
 
 ```bash
 pi install npm:pi-mcp-adapter
 ```
 
-## Maintainer checks
+<a name="maintainer-checks"></a>
+## Проверки сопровождающего
 
-From the monorepo root:
+Из корня монорепозитория:
 
 ```bash
 just package-check-pi
 ```
 
-This runs:
+Команда запускает:
 
 1. `npm ci --ignore-scripts`
 2. `npm run fetch-skills`
@@ -36,66 +43,79 @@ This runs:
 4. `npm test`
 5. `npm pack --dry-run`
 
-Run broader package gates before PR/merge:
+Перед созданием или слиянием PR запустите расширенные проверки пакетов:
 
 ```bash
 just package-check
 ```
 
-Run Python checks when touching release wiring or CLI behavior:
+При изменении механизмов выпуска или поведения CLI запустите проверки Python:
 
 ```bash
 just fast-check
 ```
 
-## Skill refresh
+<a name="skill-refresh"></a>
+## Обновление навыков
 
-Pi bundles a focused continuity skill set copied from top-level canonical Basic Memory skills:
+Pi включает набор навыков для продолжения работы, скопированных из канонических
+навыков Basic Memory верхнего уровня:
 
 - `memory-notes`
 - `memory-capture`
 - `memory-continue`
 - `memory-tasks`
 
-Refresh with:
+Для обновления:
 
 ```bash
 cd integrations/pi
 npm run fetch-skills
 ```
 
-The generated `skill-references/manifest.json` should be committed with the bundled `REFERENCE.md` files.
+Сгенерированный `skill-references/manifest.json` следует включить в коммит вместе
+с файлами `REFERENCE.md`, входящими в пакет.
 
-## Manual E2E before shipping
+<a name="manual-e2e-before-shipping"></a>
+## Ручная сквозная проверка перед выпуском
 
-Use isolated temp state. Do not mutate live Basic Memory projects or live Pi config.
+Используйте изолированное временное окружение. Не изменяйте действующие проекты
+Basic Memory или рабочую конфигурацию Pi.
 
-Minimum scenarios:
+Минимальные сценарии:
 
-1. CLI capture to Basic Memory, then fresh Pi session CLI recall.
-2. CLI-written note recalled through `pi-mcp-adapter` MCP mode.
-3. MCP adapter `bm_write`, then CLI recall/search finds the MCP-written note.
-4. Missing adapter in MCP mode reports a warning and leaves Pi usable.
-5. Missing or broken `bmPath` reports a visible capture/recall failure and does not claim persistence.
+1. Сохранение через CLI в Basic Memory, затем извлечение через CLI в новой сессии Pi.
+2. Извлечение заметки, записанной через CLI, в режиме MCP через `pi-mcp-adapter`.
+3. Запись через `bm_write` адаптера MCP и последующее нахождение заметки через
+   извлечение или поиск CLI.
+4. В режиме MCP отсутствие адаптера вызывает предупреждение, но Pi остаётся доступным.
+5. Отсутствующий или некорректный `bmPath` вызывает видимое сообщение об ошибке
+   сохранения или извлечения; система не утверждает, что данные сохранены.
 
-Latest manual evidence: `docs/PI_MEMORY_E2E_RESULTS.md`.
+Последние результаты ручной проверки: `docs/PI_MEMORY_E2E_RESULTS.md`.
 
-## Release wiring
+<a name="release-wiring"></a>
+## Механизм выпуска
 
-`just set-version ... --scope packages` now updates:
+`just set-version ... --scope packages` обновляет:
 
 - `integrations/pi/package.json`
 - `integrations/pi/package-lock.json`
 
-Stable/beta release recipes add those files to the release bump commit.
+Сценарии стабильного и бета-выпуска включают эти файлы в коммит обновления версии.
 
-## Publishing
+<a name="publishing"></a>
+## Публикация
 
-The Python package release workflow currently publishes PyPI, OpenClaw npm, GitHub release, and Homebrew artifacts. Pi npm publishing still needs workflow wiring before it is automatic.
+Процесс выпуска пакета Python сейчас публикует артефакты PyPI, npm-пакет OpenClaw,
+выпуск GitHub и Homebrew. Для автоматической публикации Pi в npm ещё требуется
+настроить workflow.
 
-Open release tasks before declaring this shippable:
+До объявления пакета готовым к выпуску остаётся:
 
-- Add GitHub Actions publishing for `integrations/pi` to npm using the same version/tag policy as OpenClaw.
-- Decide whether Pi should publish only on stable tags or on beta tags too.
-- Add a docs.basicmemory.com Pi integration page in the docs repo.
-- Add package gallery metadata (`image` or `video`) if desired before public announcement.
+- Добавить публикацию `integrations/pi` в npm через GitHub Actions с той же политикой
+  версий и тегов, что у OpenClaw.
+- Решить, публиковать ли Pi только по стабильным тегам или также по бета-тегам.
+- Добавить страницу интеграции Pi на docs.basicmemory.com в репозитории документации.
+- При желании добавить метаданные галереи пакетов (`image` или `video`) до публичного
+  объявления.

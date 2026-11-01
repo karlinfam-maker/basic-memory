@@ -1,35 +1,40 @@
-# Markdown path links
+<a name="markdown-path-links"></a>
+# Ссылки на файлы в Markdown
 
-Basic Memory indexes ordinary Markdown links to files in the same project as
-`links_to` relations, alongside existing wikilinks:
+Basic Memory индексирует обычные ссылки Markdown на файлы того же проекта как
+отношения `links_to` наряду с существующими вики-ссылками:
 
 ```markdown
 See [the guide](../guides/Getting%20Started.md#installation).
 ```
 
-The destination is resolved relative to the note containing the link. A leading
-`/` addresses the project root. Percent-encoded filenames are decoded; fragments
-and query strings do not change which file the relation targets. Reference-style
-Markdown links work too.
+Путь назначения определяется относительно заметки, содержащей ссылку. Начальный
+`/` обозначает корень проекта. Имена файлов с процентным кодированием
+декодируются; фрагмент и строка запроса не влияют на выбор файла. Ссылки Markdown
+в справочном формате тоже поддерживаются.
 
-These are exact file paths. Basic Memory does not guess a title, add `.md`, apply
-filename aliases, or search another project when the target is missing. The graph
-stores the path as the author wrote it, relative to the note: `../guides/Getting
-Started.md`, `./same.md` (a bare `same.md` is stored with the `./` mark), or a
-rooted `/guides/Getting Started.md`. Resolution turns it into a project path
-against the note's own location, so a note parsed from remote storage or moved
-later resolves the same way; missing targets remain unresolved and can resolve
-when indexed later.
+Это точные пути к файлам. Если файл не найден, Basic Memory не пытается угадать
+его заголовок, добавить `.md`, применить альтернативное имя или найти его в другом
+проекте. В графе сохраняется путь, указанный автором относительно заметки:
+`../guides/Getting Started.md`, `./same.md` (путь `same.md` без префикса
+сохраняется с отметкой `./`) или путь от корня `/guides/Getting Started.md`.
+Путь к файлу проекта определяется относительно расположения самой заметки,
+поэтому заметка, прочитанная из удалённого хранилища или перемещённая позднее,
+обрабатывается по тому же правилу. Отсутствующие файлы остаются неразрешёнными и
+могут быть найдены при последующей индексации.
 
-Wikilinks spelled as explicit paths follow the same rule: `[[../guides/Getting
-Started.md]]` and `[[./same.md]]` resolve relative to the note and only to that
-exact file. Other wikilinks keep their title, permalink, and alias resolution.
+Вики-ссылки с явно указанными путями работают так же: `[[../guides/Getting
+Started.md]]` и `[[./same.md]]` разрешаются относительно заметки и указывают
+только на соответствующий файл. Для остальных вики-ссылок сохраняется разрешение
+по заголовку, постоянной ссылке и альтернативному имени.
 
-External URLs, `mailto:` and `file:` links, fragment-only links, paths that escape
-the project, images, and links inside code do not create relations. Ordinary
-Markdown links always create `links_to` edges; typed relation syntax continues to
-use wikilinks. Notes with `bm_parse_semantics: false` remain graph-silent.
+Внешние URL, ссылки `mailto:` и `file:`, ссылки только с фрагментом, пути за
+пределы проекта, изображения и ссылки внутри кода не создают отношений. Обычные
+ссылки Markdown всегда создают связи `links_to`; для указания типа отношения
+по-прежнему используются вики-ссылки. Заметки с `bm_parse_semantics: false`
+не создают связей в графе.
 
-The authored Markdown is preserved. Existing notes gain these relations on their
-next edit or reindex. This supports interoperable Markdown navigation; it does not
-by itself declare full Open Knowledge Format conformance or add an export format.
+Исходный Markdown сохраняется. Существующие заметки получат эти отношения при
+следующем редактировании или переиндексации. Возможность поддерживает совместимую
+навигацию по Markdown; сама по себе она не означает полного соответствия Open
+Knowledge Format и не добавляет формат экспорта.
