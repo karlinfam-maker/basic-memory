@@ -1,6 +1,6 @@
-# Compact discovery
+# Компактный поиск
 
-Use compact results to choose notes before reading their bodies:
+Компактные результаты помогают выбрать заметки до чтения их содержимого:
 
 ```sh
 bm tool search-notes "deployment" --compact --json
@@ -8,19 +8,22 @@ bm tool build-context "notes/deployment" --compact --json
 bm tool read-note "notes/deployment" --start-line 20 --end-line 60 --plain
 ```
 
-`--compact` also works with `--plain` and the interactive Rich display. Output
-format selection is unchanged: pipes default to JSON, while `--plain` explicitly
-requests text. Omit `--compact` to retain ordinary content-bearing responses.
+`--compact` также работает с `--plain` и интерактивным отображением Rich.
+Выбор формата вывода не меняется: при передаче в конвейер по умолчанию используется
+JSON, а `--plain` явно запрашивает текст. Без `--compact` возвращается обычный
+ответ с содержимым.
 
-Search omits note bodies and matched excerpts. Context omits note bodies and entity
-observation lists; observations that surface as primary or related results are
-labeled by category and point at their owning file paths. IDs, relation targets,
-and pagination remain available in JSON.
+Компактный поиск не включает тела заметок и найденные фрагменты. Компактный контекст
+не включает тела заметок и списки наблюдений сущностей; наблюдения, попавшие в
+основные или связанные результаты, снабжаются категорией и путём к исходному файлу.
+В JSON по-прежнему доступны идентификаторы, цели связей и пагинация.
 
-MCP clients use `bm_search(query="deployment", compact=True, project="main")` and `bm_context(identifier="notes/deployment", compact=True, project="main")`.
-Compact search reduces model-visible output, not database search work. Compact
-context also skips loading observations on the server (`include_observations=false`
-on the `/memory` endpoint); the graph traversal itself is unchanged.
-Neither imposes a fixed token limit: titles, metadata, and the number of graph
-items still affect response size. Use pagination and targeted note reads to bound
-the rest of the workflow.
+Клиенты MCP используют `bm_search(query="deployment", compact=True, project="main")`
+и `bm_context(identifier="notes/deployment", compact=True, project="main")`.
+Компактный поиск сокращает объём вывода, видимого модели, но не объём работы базы
+данных. Компактный контекст также пропускает загрузку наблюдений на сервере
+(`include_observations=false` для метода `/memory`); обход графа при этом не
+меняется. Ни один из режимов не устанавливает фиксированного ограничения токенов:
+размер ответа по-прежнему зависит от заголовков, метаданных и числа элементов
+графа. Для дальнейшего ограничения объёма используйте пагинацию и выборочное
+чтение заметок.
