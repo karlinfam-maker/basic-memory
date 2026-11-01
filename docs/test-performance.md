@@ -1,9 +1,12 @@
-# Test performance and incremental runs
+<a name="test-performance-and-incremental-runs"></a>
+# Производительность тестов и инкрементальные запуски
 
-CI and local runs use the same root justfile recipes. CI runs complete suites in parallel shards without dependency tracing or caches.
-Local incremental selection remains available through `just fast-test`.
+В CI и локально используются одни и те же команды корневого justfile. В CI полные
+наборы запускаются параллельными частями без отслеживания зависимостей и кэша.
+Локально по-прежнему доступен инкрементальный выбор через `just fast-test`.
 
-## Local iteration
+<a name="local-iteration"></a>
+## Локальная работа
 
 ```sh
 # Record a full baseline for the collection used by fast-test, then publish it
@@ -21,62 +24,73 @@ just test-unit-sqlite -k 'test_ci_test_selection or test_pr_title_workflow'
 just test-int-postgres --durations=30 --junitxml=postgres-results.xml
 ```
 
-`testmon-refresh` records the same collection/environment as `fast-test`; it does not
-also execute the Postgres suite. Use `just test-postgres` for full Postgres validation.
-Local `fast-test` retains `COVERAGE_CORE=ctrace` and its separate testmon environment
-so repeated per-test dependencies are recorded correctly on Python 3.14.
+`testmon-refresh` сохраняет исходные данные для того же набора и окружения, что
+использует `fast-test`; набор Postgres при этом дополнительно не запускается. Для
+полной проверки Postgres используйте `just test-postgres`. Локальный `fast-test`
+сохраняет `COVERAGE_CORE=ctrace` и отдельное окружение testmon, чтобы повторные
+зависимости отдельных тестов корректно записывались в Python 3.14.
 
-## CI partitioning
+<a name="ci-partitioning"></a>
+## Разделение тестов в CI
 
-`scripts/run_tests.py` assigns complete files to disjoint groups using committed
-`.test_durations`. Files with recorded durations are balanced by their aggregate time;
-new files use the suite's mean file time. A suite with no timing history uses file sizes.
-`just test-durations-postgres` refreshes the existing unit timing file.
-The partition keeps tests sharing a file together and runs every assigned test.
+`scripts/run_tests.py` распределяет целые файлы по непересекающимся группам на
+основе сохранённого в репозитории `.test_durations`. Файлы с известной длительностью
+балансируются по суммарному времени; для новых используется среднее время файла в
+наборе. Если история длительности отсутствует, используются размеры файлов.
+`just test-durations-postgres` обновляет существующий файл длительности модульных
+тестов. Тесты одного файла остаются вместе; все назначенные тесты выполняются.
 
-Current parallelism:
+Текущий параллелизм:
 
-| Suite | Shards per runtime |
+| Набор | Частей на среду выполнения |
 | --- | ---: |
-| SQLite unit | 4 |
-| SQLite integration | 2 |
-| Postgres unit | 6 |
-| Postgres integration | 4 |
+| Модульные тесты SQLite | 4 |
+| Интеграционные тесты SQLite | 2 |
+| Модульные тесты Postgres | 6 |
+| Интеграционные тесты Postgres | 4 |
 
-Both main and branch builds run complete suites. There are no testmon baselines,
-selection flags, or dependency caches in CI. Subprocess tests are included normally.
-`just test-cli-smoke` also provides a small, early startup/exit check covering
-help/version startup, initialization, schema validation, and reset exit behavior.
+И в основной ветке, и в остальных ветках запускаются полные наборы. В CI нет базовых
+данных testmon, флагов выбора или кэша зависимостей. Тесты с дочерними процессами
+входят в обычный запуск. `just test-cli-smoke` также выполняет небольшую раннюю
+проверку запуска и завершения: help/version, инициализации, проверки схемы и
+поведения при завершении reset.
 
-Each job publishes its assigned file list and JUnit results and prints its 30 slowest
-test phases. Use those results to evaluate fixture costs and duplicate scenarios before
-removing coverage. Increased job counts can hit account concurrency limits; compare
-queue time and complete workflow wall time, not just individual job duration.
+Каждое задание публикует список назначенных файлов и результаты JUnit, а также
+выводит 30 самых медленных этапов тестов. Прежде чем сокращать покрытие, используйте
+эти данные для оценки стоимости фикстур и повторяющихся сценариев. Увеличение числа
+заданий может упереться в ограничение параллелизма аккаунта; сравнивайте время
+ожидания и полное время workflow, а не только длительность отдельных заданий.
 
-## Initial evidence, 2026-10-24
+<a name="initial-evidence-2026-10-24"></a>
+## Первоначальные результаты, 24.10.2026
 
-Implementation base: `2f66021c1e50ce0023dc2c392c1336b3988a1891` (main).
-The existing [exact-main run](https://github.com/basicmachines-co/basic-memory/actions/runs/40115550931)
-is the CI baseline; it predates these changes.
+Основа реализации: `2f66021c1e50ce0023dc2c392c1336b3988a1891` (main).
+Существующий [запуск точной версии main](https://github.com/basicmachines-co/basic-memory/actions/runs/40115550931)
+служит базовым результатом CI и предшествует этим изменениям.
 
-The earlier [successful branch run](https://github.com/basicmachines-co/basic-memory/actions/runs/40055593080)
-took about 28.5 minutes. SQLite unit test steps took 20–27 minutes; the three Postgres
-unit shards each took 24–27 minutes. Installation was generally seconds.
+Ранее [успешный запуск ветки](https://github.com/basicmachines-co/basic-memory/actions/runs/40055593080)
+занял около 28,5 минуты. Этапы модульных тестов SQLite заняли 20–27 минут; каждая
+из трёх частей модульных тестов Postgres — 24–27 минут. Установка обычно занимала
+секунды.
 
-Its Postgres integration step was forcibly killed after 600 seconds at only 9% complete,
-and the old recipe accepted exit 137 as success. This was not a completed test suite or
-a teardown-only delay. The shared runner now propagates failed/killed subprocesses;
-the per-test timeout and CI job deadline remain failure boundaries.
+Этап интеграционных тестов Postgres был принудительно остановлен через 600 секунд
+при готовности лишь 9%, а прежняя команда принимала код завершения 137 за успех.
+Это не было полным прохождением тестов или задержкой только при завершении.
+Теперь общий механизм запуска передаёт ошибки и принудительное завершение дочерних
+процессов; тайм-аут отдельного теста и предельное время задания CI остаются
+границами, при которых запуск считается неудачным.
 
-A local, deliberately interrupted Postgres integration sample on the implementation
-base completed 120 tests in 670.92 seconds. Its slowest observed call was the concurrent
-append/refusal test at 53.65 seconds. This sample was not a full-suite pass and is not
-directly comparable to CI hardware. The SQLite sample was also interrupted and must
-not be reported as a successful full run.
+Локальный, намеренно прерванный прогон части интеграционных тестов Postgres на
+исходной версии выполнил 120 тестов за 670,92 секунды. Самым медленным наблюдаемым
+вызовом был тест одновременного добавления и отказа — 53,65 секунды. Это не полное
+прохождение набора и результат нельзя напрямую сравнивать с оборудованием CI.
+Прогон SQLite также был прерван и не должен считаться успешным полным запуском.
 
-No tests were removed or moved off the PR gate in this change. An after-change CI run
-is still required to measure the actual wall-clock improvement and shard imbalance.
+В этом изменении тесты не удалялись и не исключались из проверок PR. Чтобы измерить
+фактическое изменение общего времени и дисбаланс частей, всё ещё нужен запуск CI
+после изменений.
 
-The first traced CI trial hit heavy-test timeouts. Locally, the same overlapping-save
-test passed in 52.95 seconds without tracing and 136.05 seconds with testmon C tracing.
-CI therefore uses sharding alone; local incremental selection remains opt-in.
+Первый пробный запуск CI с трассировкой привёл к тайм-аутам тяжёлых тестов. Локально
+тот же тест пересекающихся сохранений прошёл за 52,95 секунды без трассировки и за
+136,05 секунды с C-трассировкой testmon. Поэтому в CI используется только
+разделение на части; локальный инкрементальный выбор остаётся необязательным.
