@@ -1,91 +1,120 @@
-# Cloud Semantic Search Value (Customer-Facing Technical Story)
+<a name="cloud-semantic-search-value-customer-facing-technical-story"></a>
+# Ценность облачного семантического поиска: техническое описание для клиентов
 
-This document explains why teams should buy cloud semantic search even when local search exists.
+Этот документ объясняет, почему команды могут выбрать облачный семантический
+поиск, даже если доступен локальный.
 
-## Core Promise
+<a name="core-promise"></a>
+## Основное обещание
 
-Markdown files remain the source of truth in both local and cloud modes.
+И в локальном, и в облачном режиме источником данных остаются Markdown-файлы.
 
-- Files are portable.
-- Search indexes are derived and rebuildable.
-- You never get locked into proprietary document storage.
+- Файлы можно переносить.
+- Поисковые индексы являются производными данными и могут быть пересозданы.
+- Хранение документов не привязывает пользователя к закрытому формату.
 
-## The Customer Problem
+<a name="the-customer-problem"></a>
+## Задача клиента
 
-Teams paying for cloud are usually not optimizing for "can this run locally." They are optimizing for:
+Команды, оплачивающие облачную версию, обычно оценивают не только возможность
+локального запуска. Для них важны:
 
-- finding the right note the first time,
-- keeping retrieval quality high as note volume grows,
-- avoiding search slowdowns while content is actively changing,
-- getting consistent results across users, agents, and sessions.
+- нахождение нужной заметки с первого раза;
+- сохранение качества поиска при увеличении числа заметок;
+- отсутствие замедления поиска во время активного изменения содержимого;
+- согласованные результаты для разных пользователей, агентов и сессий.
 
-## Why Cloud Is the Aspirin
+<a name="why-cloud-is-the-aspirin"></a>
+## Облако как средство решения насущных проблем
 
-Cloud semantic search is the immediate pain reliever because it fixes the problems users feel right now.
+Облачный семантический поиск призван устранить проблемы, которые пользователи
+ощущают непосредственно сейчас.
 
-### 1) Better hit rate on real queries
+<a name="1-better-hit-rate-on-real-queries"></a>
+### 1. Больше подходящих результатов по реальным запросам
 
-Cloud uses stronger managed embeddings than the default local model, which improves semantic recall for paraphrases and vague questions.
+Облачная версия использует более мощные управляемые модели векторных представлений,
+чем локальная модель по умолчанию. Это повышает полноту семантического поиска при
+перефразированных и нечётких вопросах.
 
-Customer outcome:
+Что получает клиент:
 
-- fewer "I know this exists but search missed it" moments,
-- less query rewording,
-- faster time to answer.
+- меньше ситуаций, когда нужный материал существует, но поиск его не находит;
+- реже приходится менять формулировку запроса;
+- ответ находится быстрее.
 
-### 2) Better behavior under active workloads
+<a name="2-better-behavior-under-active-workloads"></a>
+### 2. Более стабильная работа при активной нагрузке
 
-Cloud indexing runs out of band in workers, so indexing does not compete with interactive read/write traffic.
+Облачная индексация выполняется отдельно фоновыми обработчиками и не конкурирует
+с интерактивными операциями чтения и записи.
 
-Customer outcome:
+Что получает клиент:
 
-- stable search responsiveness during heavy updates,
-- fresher semantic results shortly after edits,
-- less user-visible performance variance.
+- стабильную отзывчивость поиска при массовых обновлениях;
+- более свежие семантические результаты вскоре после изменений;
+- меньшие заметные пользователю колебания производительности.
 
-### 3) Better consistency for shared knowledge
+<a name="3-better-consistency-for-shared-knowledge"></a>
+### 3. Согласованный поиск по общей базе знаний
 
-Cloud retrieval runs against a centralized tenant index, so teams and agents resolve against the same semantic state.
+Облачный поиск работает с централизованным индексом организации, поэтому команда
+и агенты обращаются к одному семантическому состоянию.
 
-Customer outcome:
+Что получает клиент:
 
-- fewer "works on my machine" search differences,
-- more predictable agent behavior across environments,
-- easier cross-user collaboration on large knowledge bases.
+- меньше различий по принципу «на моём компьютере работает»;
+- более предсказуемое поведение агентов в разных средах;
+- более простую совместную работу с большими базами знаний.
 
-### 4) Better quality at higher scale
+<a name="4-better-quality-at-higher-scale"></a>
+### 4. Качество при большем масштабе
 
-With Postgres + `pgvector` per tenant, cloud can sustain larger note collections and higher query volumes than typical local setups.
+Благодаря Postgres и `pgvector` для каждого клиента облако способно поддерживать
+более крупные коллекции заметок и больший объём запросов, чем типичные локальные
+установки.
 
-Customer outcome:
+Что получает клиент:
 
-- confidence as repositories grow to tens of thousands of notes,
-- less need for user-side tuning,
-- fewer quality regressions as usage increases.
+- уверенность при росте репозиториев до десятков тысяч заметок;
+- меньшую потребность в самостоятельной настройке;
+- меньшее ухудшение качества при росте использования.
 
-## Local Is the Vitamin
+<a name="local-is-the-vitamin"></a>
+## Долгосрочная ценность локальной версии
 
-Local semantic search still matters and should stay strong.
+Локальный семантический поиск остаётся важным и должен развиваться:
 
-- offline use,
-- privacy-first operation,
-- no cloud dependency,
-- user-controlled runtime.
+- работа без сети;
+- приоритет конфиденциальности;
+- независимость от облака;
+- среда выполнения под контролем пользователя.
 
-It compounds long-term ownership and resilience, but does not remove the immediate pain points cloud solves for teams at scale.
+Это укрепляет долгосрочный контроль и устойчивость, хотя и не устраняет всех
+насущных проблем, которые облачная версия решает для крупных команд.
 
-## Recommended Messaging
+<a name="recommended-messaging"></a>
+## Рекомендуемые формулировки
 
-One-liner:
+Коротко:
 
-"Cloud semantic search is the aspirin: it fixes retrieval quality and performance pain now. Local semantic search is the vitamin: it builds long-term control and resilience."
+«Облачный семантический поиск — как лекарство: он решает текущие проблемы качества
+и скорости поиска. Локальный — как витамин: помогает сохранять контроль и
+устойчивость в долгосрочной перспективе».
 
-Long form:
+Подробнее:
 
-"Basic Memory keeps markdown as the source of truth everywhere. Local gives privacy and offline control. Cloud adds immediate, measurable improvements in search quality, consistency, and responsiveness for teams and agents running at scale."
+«Basic Memory везде сохраняет Markdown как источник данных. Локальная версия даёт
+конфиденциальность и контроль без сети. Облако обеспечивает заметное улучшение
+качества, согласованности и отзывчивости поиска для команд и агентов при большой
+нагрузке».
 
-## Packaging Guidance
+<a name="packaging-guidance"></a>
+## Рекомендации по составу продукта
 
-- Base: local FTS plus optional local semantic search.
-- Cloud value: higher semantic quality, stable performance under load, and consistent team-wide retrieval.
-- Keep interfaces pluggable (`EmbeddingProvider`, vector backend protocol) so implementation can evolve without changing user workflows.
+- Базовый вариант: локальный полнотекстовый поиск и необязательный локальный
+  семантический поиск.
+- Ценность облака: более высокое качество семантического поиска, стабильная работа
+  под нагрузкой и согласованные результаты для всей команды.
+- Интерфейсы должны оставаться заменяемыми (`EmbeddingProvider`, протокол векторного
+  хранилища), чтобы реализация могла меняться без изменения пользовательских процессов.
