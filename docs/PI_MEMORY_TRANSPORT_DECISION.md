@@ -1,72 +1,117 @@
-# Pi memory transport decision — initial contracts
+<a name="pi-memory-transport-decision--initial-contracts"></a>
+# Решение о транспорте памяти Pi — первоначальные контракты
 
-## Status
+<a name="status"></a>
+## Статус
 
-Accepted for the first implementation slice: ship a thin Pi package that supports Basic Memory CLI mode directly and MCP mode through `pi-mcp-adapter` when users install it.
+Для первого этапа реализации принято решение выпустить тонкий пакет Pi с прямой
+поддержкой CLI Basic Memory и режимом MCP через `pi-mcp-adapter`, если пользователь
+установил адаптер.
 
-## Findings
+<a name="findings"></a>
+## Результаты исследования
 
-### Pi package and extension surface
+<a name="pi-package-and-extension-surface"></a>
+### Пакет Pi и возможности расширений
 
-Pi 0.85.1 supports package resources through `package.json` `pi.extensions` and `pi.skills`. Extensions can use `session_start`, `before_agent_start`, `agent_settled`, `session_before_compact`, `session_compact`, `session_shutdown`, reload, commands, tools, and custom session entries. Long-lived resources must start after `session_start` or on demand and must be cleaned up from `session_shutdown`.
+Pi 0.85.1 поддерживает ресурсы пакетов через `pi.extensions` и `pi.skills` в
+`package.json`. Расширения могут использовать `session_start`, `before_agent_start`,
+`agent_settled`, `session_before_compact`, `session_compact`, `session_shutdown`,
+перезагрузку, команды, инструменты и собственные записи сессии. Долгоживущие ресурсы
+должны запускаться после `session_start` или по требованию, а освобождаться — при
+`session_shutdown`.
 
-### MCP adapter
+<a name="mcp-adapter"></a>
+### Адаптер MCP
 
-`pi-mcp-adapter` 2.32.1 is MIT licensed, requires Node >=20, and exports `createMcpAdapter`, `registerMcpServer`, status events, runtime registration events, and public types. It is a Pi package with `pi.extensions: ["./index.ts"]`.
+`pi-mcp-adapter` 2.32.1 распространяется по лицензии MIT, требует Node >=20 и
+экспортирует `createMcpAdapter`, `registerMcpServer`, события состояния и регистрации
+во время выполнения, а также публичные типы. Это пакет Pi с
+`pi.extensions: ["./index.ts"]`.
 
-The supported integration path for another extension is the public runtime registration API or equivalent shared event bus:
+Поддерживаемый способ интеграции другого расширения — публичный API регистрации
+во время выполнения или аналогичная общая шина событий:
 
-- event: `pi-mcp-adapter:runtime-register:v1`
-- version: `1`
-- request fields: `name`, `definition`, `result`
-- registrations are session/runtime scoped and never persisted
-- duplicate names fail closed
-- runtime servers are proxy-only (`directTools: false`)
-- disposal closes the server and removes lifecycle state
+- событие: `pi-mcp-adapter:runtime-register:v1`;
+- версия: `1`;
+- поля запроса: `name`, `definition`, `result`;
+- регистрации действуют в пределах сессии или среды выполнения и не сохраняются;
+- повторяющиеся имена приводят к отказу;
+- серверы среды выполнения работают только через прокси (`directTools: false`);
+- при освобождении ресурсов сервер закрывается, а состояние жизненного цикла удаляется.
 
-This is enough for a Basic Memory Pi extension to register a Basic Memory MCP server without importing private adapter internals. If the adapter is absent, registration fails visibly.
+Этого достаточно, чтобы расширение Basic Memory для Pi зарегистрировало MCP-сервер
+Basic Memory без импорта внутренних компонентов адаптера. Если адаптер отсутствует,
+ошибка регистрации видна пользователю.
 
-### Basic Memory CLI contracts verified locally
+<a name="basic-memory-cli-contracts-verified-locally"></a>
+### Контракты CLI Basic Memory, проверенные локально
 
-Verified with isolated `BASIC_MEMORY_HOME` and `BASIC_MEMORY_CONFIG_DIR`, using `bm` from `/Users/phernandez/dev/basicmachines/basic-memory/.venv/bin/bm`:
+Проверено в изолированных `BASIC_MEMORY_HOME` и `BASIC_MEMORY_CONFIG_DIR` с
+использованием `bm` из `/Users/phernandez/dev/basicmachines/basic-memory/.venv/bin/bm`:
 
-- `bm project list --json` returns structured project data.
-- `bm project add NAME PATH --default --local --no-wait` creates a local project without changing the user's real config when env vars are isolated.
-- `bm tool write-note` accepts content from stdin when `--content` is omitted.
-- `bm tool write-note` returns JSON by default in a piped/non-interactive context.
-- `bm tool write-note --overwrite` updates an existing note.
-- conflicting `write-note` without `--overwrite` exits `1` and returns a structured `NOTE_ALREADY_EXISTS` JSON payload.
-- `bm tool read-note --plain` returns undecorated content.
-- `bm tool read-note --json` and `bm tool search-notes --json` return structured payloads.
-- `--project`, `--project-id`, `--local`, and `--cloud` are available on read/search/write commands.
+- `bm project list --json` возвращает структурированные сведения о проектах.
+- `bm project add NAME PATH --default --local --no-wait` создаёт локальный проект,
+  не меняя реальную конфигурацию пользователя при изолированных переменных среды.
+- `bm tool write-note` принимает содержимое из stdin, если `--content` не задан.
+- В конвейере или другой неинтерактивной среде `bm tool write-note` по умолчанию
+  возвращает JSON.
+- `bm tool write-note --overwrite` обновляет существующую заметку.
+- При конфликте `write-note` без `--overwrite` завершается с кодом `1` и возвращает
+  структурированный JSON с `NOTE_ALREADY_EXISTS`.
+- `bm tool read-note --plain` возвращает содержимое без оформления.
+- `bm tool read-note --json` и `bm tool search-notes --json` возвращают
+  структурированные данные.
+- `--project`, `--project-id`, `--local` и `--cloud` доступны для команд чтения,
+  поиска и записи.
 
-The first write may trigger local embedding model download, which affects cold latency and should be measured separately from warm CLI overhead.
+Первая запись может вызвать загрузку локальной модели векторных представлений.
+Задержку при холодном запуске следует измерять отдельно от накладных расходов
+прогретого CLI.
 
-### Existing hook reuse
+<a name="existing-hook-reuse"></a>
+### Использование существующих хуков
 
-`bm hook` now supports a Pi harness profile for automatic lifecycle continuity. Reusable concepts:
+`bm hook` поддерживает профиль среды Pi для автоматического сохранения контекста
+жизненного цикла. Можно повторно использовать следующие принципы:
 
-- fail-open lifecycle behavior;
-- strict JSON booleans for capture settings;
-- explicit primary project mapping;
-- bounded session-start briefs;
-- graph-derived recall fenced as reference data, not instructions;
-- lifecycle envelopes separate from durable knowledge;
-- checkpoint prompts separate from raw transcript capture.
+- поведение, позволяющее жизненному циклу продолжаться при ошибке;
+- строгие логические значения JSON для настроек сохранения;
+- явное назначение основного проекта;
+- ограниченный объём сводки в начале сессии;
+- найденные в графе сведения обозначаются как справочные данные, а не инструкции;
+- служебные записи жизненного цикла отделены от долговременных знаний;
+- запросы контрольных точек отделены от сохранения исходной расшифровки.
 
-Pi still must not invoke `bm hook --harness codex|claude`. The package owns Pi event wiring, while `bm hook --harness pi` owns the shared Basic Memory lifecycle semantics: bounded recall, fenced reference data, explicit project routing, predictable `pi/sessions` checkpoint placement, and lifecycle trace distinct from authored knowledge. Users can set `useHookFlow: false` to fall back to the package's direct CLI search/write path.
+Pi по-прежнему не должен вызывать `bm hook --harness codex|claude`. Пакет отвечает
+за подключение событий Pi, а `bm hook --harness pi` — за общую семантику жизненного
+цикла Basic Memory: ограниченное извлечение контекста, отделённые справочные данные,
+явную маршрутизацию проекта, предсказуемое размещение контрольных точек в
+`pi/sessions` и журнал жизненного цикла отдельно от созданных знаний. Параметр
+`useHookFlow: false` переключает на прямой поиск и запись через CLI пакета.
 
-## Initial defaults
+<a name="initial-defaults"></a>
+## Первоначальные настройки по умолчанию
 
-- CLI mode is the no-extra-dependency default.
-- MCP mode is opt-in and requires `pi-mcp-adapter` to be installed by the user.
-- Project selection is explicit; the extension must not mutate the user's global Basic Memory default.
-- Hook flow is enabled by default for automatic lifecycle behavior, with `useHookFlow: false` as the escape hatch.
-- Auto-recall and auto-capture default on for an opinionated first-run experience.
-- Without an explicit Pi project mapping, recall emits setup guidance and hook-backed capture has no write destination, so it does not silently mutate the user's ambient default project.
-- Explicit `/bm-recall` and `/bm-capture` commands remain available for deliberate one-off use.
+- Режим CLI включён по умолчанию и не требует дополнительных зависимостей.
+- Режим MCP включается по желанию и требует установленного пользователем
+  `pi-mcp-adapter`.
+- Проект выбирается явно; расширение не должно менять глобальный проект Basic Memory
+  пользователя по умолчанию.
+- Для автоматической работы жизненного цикла по умолчанию включены хуки;
+  `useHookFlow: false` позволяет их отключить.
+- Автоматическое извлечение и сохранение по умолчанию включены для работы сразу
+  после установки.
+- Без явного сопоставления проекта Pi извлечение выводит рекомендации по настройке,
+  а сохранение через хук не имеет назначения записи. Поэтому проект пользователя
+  по умолчанию не изменяется незаметно.
+- Команды `/bm-recall` и `/bm-capture` остаются доступны для разового явного вызова.
 
-## Open questions
+<a name="open-questions"></a>
+## Открытые вопросы
 
-- Whether explicit `/bm-capture <title>` should also route through a hook verb or remain direct so user-supplied titles keep conflict-safe write semantics.
-- Warm/cold latency comparison between direct CLI calls, hook-backed CLI lifecycle calls, and adapter MCP proxy calls.
+- Нужно ли направлять явную команду `/bm-capture <title>` через действие хука или
+  оставить прямой вызов, чтобы пользовательские заголовки сохраняли защиту от
+  конфликтов при записи.
+- Сравнение задержек при тёплом и холодном запуске для прямого CLI, вызовов CLI
+  через хуки жизненного цикла и прокси-вызовов MCP через адаптер.
